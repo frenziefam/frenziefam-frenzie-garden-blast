@@ -19,10 +19,24 @@ export const RARITY: Record<Species, Rarity> = {
 export type Stage = 1 | 2 | 3;
 export const MATURE: Stage = 3;
 
+export type WeedType = 'creeping' | 'aggressive';
+export type ToolKind = 'pull' | 'spray' | 'burn';
+export type SpreadSource = WeedType | 'nest' | 'endless';
+export type Tools = Record<ToolKind, number>;
+
 export interface Plant {
   id: number;
   species: Species;
   stage: Stage;
+  /** Weed type choking this plant, if any. Growth continues while infested (approved). */
+  infested?: WeedType | null;
+  /** Choke damage, 0-2. The plant is destroyed at 2 (GDD G3). Tracked separately from growth. */
+  choke?: number;
+}
+
+export interface Nest {
+  hp: number;
+  counter: number;
 }
 
 export interface BlueprintSlot {
@@ -34,6 +48,16 @@ export interface Tile {
   blocked: boolean;
   plant: Plant | null;
   slot: BlueprintSlot | null;
+  weed: WeedType | null;
+  nest: Nest | null;
+  /** Weed Spray protection: weeds cannot spread here while move <= this value. */
+  protectedUntil: number;
+}
+
+/** Where a weed group (or Root Nest) will spread next, shown to the player in advance. */
+export interface Telegraph extends Cell {
+  type: WeedType;
+  source: 'group' | 'nest';
 }
 
 export interface Cell {
@@ -49,7 +73,10 @@ export interface BlueprintDef {
 
 export type Objective =
   | { kind: 'blueprint'; blueprintId: string; count: number }
-  | { kind: 'score'; target: number };
+  | { kind: 'score'; target: number }
+  | { kind: 'clearWeeds' }
+  | { kind: 'nests' }
+  | { kind: 'protect'; r: number; c: number };
 
 export type Mode = 'campaign' | 'endless';
 
@@ -76,11 +103,26 @@ export interface LevelDef {
   freeform: boolean;
   /** Score needed for 1, 2 and 3 stars. */
   stars: [number, number, number];
+  /** Starting weeds, Root Nests and pre-planted flowers. */
+  weeds?: (Cell & { type: WeedType })[];
+  nests?: (Cell & { hp?: number })[];
+  plants?: (Cell & { species: Species; stage: Stage })[];
+  /** Creeping weeds spread every N plantings (default 3). */
+  creepInterval?: number;
+  /** Aggressive weeds spread every N milliseconds of play (default 15,000). */
+  aggressiveMs?: number;
+  /** Root Nests spawn a weed every N plantings (default 2). */
+  nestInterval?: number;
+  /** Tools granted for this attempt. Prototype C replaces this with the player's inventory. */
+  tools?: Partial<Tools>;
 }
 
 export type Action =
   | { type: 'plant'; slot: number; r: number; c: number }
-  | { type: 'compost'; slot: number };
+  | { type: 'compost'; slot: number }
+  | { type: 'tool'; tool: ToolKind; r: number; c: number; axis?: 'row' | 'col' }
+  /** Real time passing while the game waits for input. Drives aggressive weeds. */
+  | { type: 'tick'; ms: number };
 
 export type PatternKind = 'ring' | 'cross' | 'line5' | 'lshape' | 'tshape' | 'square' | 'line4' | 'blueprint';
 
@@ -101,12 +143,25 @@ export type GameEvent =
   | { type: 'coins'; amount: number; reason: string }
   | { type: 'conveyor'; slot: number; species: Species }
   | { type: 'composted'; slot: number }
+  | { type: 'spread'; r: number; c: number; weed: WeedType; source: SpreadSource }
+  | { type: 'infested'; r: number; c: number; weed: WeedType }
+  | { type: 'choked'; r: number; c: number; species: Species }
+  | { type: 'cleared'; cells: Cell[]; cured: Cell[]; by: 'burst' | ToolKind }
+  | { type: 'destroyed'; cells: Cell[] }
+  | { type: 'nestHit'; r: number; c: number; hp: number }
+  | { type: 'protected'; cells: Cell[] }
+  | { type: 'toolUsed'; tool: ToolKind }
+  | { type: 'toolEarned'; tool: ToolKind }
+  | { type: 'stuck' }
   | { type: 'ended'; status: 'won' | 'lost'; reason: string };
 
 export interface RunStats {
   patterns: number;
   flowersGrown: number;
   largestCombo: number;
+  weedsRemoved: number;
+  /** Milliseconds of play time counted by ticks (Endless "time survived"). */
+  playMs: number;
 }
 
 export interface GameState {
@@ -134,4 +189,12 @@ export interface GameState {
   endReason: string | null;
   stars: number;
   stats: RunStats;
+  tools: Tools;
+  telegraphs: Telegraph[];
+  /** Milliseconds until aggressive weeds next spread. */
+  aggroMs: number;
+  /** Id of the plant a protect objective guards, and whether it has been lost. */
+  guardedId: number | null;
+  guardedLost: boolean;
+  hadWeeds: boolean;
 }

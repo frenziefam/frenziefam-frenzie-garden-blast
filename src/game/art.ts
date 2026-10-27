@@ -216,6 +216,147 @@ function drawPacket(g: G) {
   g.strokeRoundedRect(4, 4, TEX - 8, TEX - 8, 12);
 }
 
+// ---------- weeds, nests and tools (Prototype B) ----------
+// Creeping vines are green, curling and leafy. Aggressive weeds are dark red and thorny. The two
+// differ in shape as well as colour, so they stay distinct without colour vision (GDD I3).
+
+function vine(g: G, cx: number, cy: number, leaf: number, stem: number, scale = 1) {
+  g.lineStyle(5 * scale, stem, 1);
+  g.beginPath();
+  g.arc(cx - 10 * scale, cy + 6 * scale, 16 * scale, -0.4, 2.6);
+  g.strokePath();
+  g.beginPath();
+  g.arc(cx + 12 * scale, cy - 6 * scale, 14 * scale, 2.8, 5.8);
+  g.strokePath();
+  g.fillStyle(leaf, 1);
+  for (const [a, d] of [[0.2, 22], [1.3, 18], [2.4, 24], [3.4, 20], [4.4, 23], [5.4, 17]] as const) {
+    petal(g, cx, cy, a, d * scale * 0.55, 18 * scale, 9 * scale);
+  }
+  g.fillStyle(darken(leaf, 0.7), 1);
+  g.fillCircle(cx, cy, 5 * scale);
+}
+
+function thorns(g: G, cx: number, cy: number, fill: number, dark: number, scale = 1) {
+  g.lineStyle(6 * scale, dark, 1);
+  g.lineBetween(cx - 26 * scale, cy + 20 * scale, cx + 24 * scale, cy - 22 * scale);
+  g.lineBetween(cx - 24 * scale, cy - 18 * scale, cx + 22 * scale, cy + 22 * scale);
+  g.fillStyle(fill, 1);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    const r1 = 12 * scale;
+    const r2 = 32 * scale;
+    g.fillTriangle(
+      cx + Math.cos(a - 0.22) * r1, cy + Math.sin(a - 0.22) * r1,
+      cx + Math.cos(a + 0.22) * r1, cy + Math.sin(a + 0.22) * r1,
+      cx + Math.cos(a) * r2, cy + Math.sin(a) * r2,
+    );
+  }
+  g.fillStyle(dark, 1);
+  g.fillCircle(cx, cy, 13 * scale);
+  g.fillStyle(fill, 1);
+  g.fillCircle(cx, cy, 7 * scale);
+}
+
+function drawNest(g: G) {
+  const cx = TEX / 2;
+  const cy = TEX / 2 + 6;
+  g.fillStyle(0x000000, 0.3);
+  g.fillEllipse(cx, cy + 26, 76, 20);
+  g.lineStyle(6, 0x4a2a14, 1);
+  for (const a of [0.3, 1.2, 2.0, 2.9, 3.6]) g.lineBetween(cx, cy + 4, cx + Math.cos(a) * 40, cy + 4 + Math.sin(a) * 26);
+  g.fillStyle(0x3a2212, 1);
+  g.fillEllipse(cx, cy, 64, 42);
+  g.fillStyle(0x55331b, 1);
+  g.fillEllipse(cx, cy - 4, 52, 30);
+  g.fillStyle(0x120a05, 1);
+  g.fillEllipse(cx, cy - 6, 26, 14);
+  g.fillStyle(0x8fd13f, 1);
+  petal(g, cx - 6, cy - 8, -2.2, 0, 18, 7);
+  petal(g, cx + 6, cy - 8, -0.9, 0, 18, 7);
+}
+
+function drawTool(g: G, kind: string) {
+  const cx = TEX / 2;
+  const cy = TEX / 2;
+  if (kind === 'pull') {
+    // A weed lifted out of the soil, roots showing.
+    g.fillStyle(PALETTE.soilDark, 1);
+    g.fillEllipse(cx, cy + 32, 60, 16);
+    g.lineStyle(3, 0xd9c3a0, 1);
+    for (const dx of [-8, 0, 8]) g.lineBetween(cx, cy + 4, cx + dx, cy + 22);
+    g.fillStyle(PALETTE.weed, 1);
+    for (const a of [-2.4, -1.57, -0.74]) petal(g, cx, cy, a, 2, 30, 12);
+    g.fillStyle(PALETTE.cream, 1);
+    g.fillTriangle(cx + 26, cy - 30, cx + 16, cy - 14, cx + 36, cy - 14);
+    g.fillRect(cx + 23, cy - 16, 6, 18);
+  } else if (kind === 'spray') {
+    // Spray bottle with a mist cloud.
+    g.fillStyle(0x3f78b8, 1);
+    g.fillRoundedRect(cx - 16, cy - 6, 30, 40, 8);
+    g.fillStyle(0xd9e8f6, 1);
+    g.fillRect(cx - 8, cy - 18, 14, 14);
+    g.fillRect(cx - 2, cy - 22, 22, 6);
+    g.fillStyle(0xbfe3ff, 0.9);
+    for (const [dx, dy, r] of [[30, -24, 5], [36, -14, 4], [28, -34, 3], [40, -28, 3]] as const) g.fillCircle(cx + dx, cy + dy, r);
+  } else if (kind === 'burn') {
+    // Flame.
+    g.fillStyle(0xc8283a, 1);
+    petal(g, cx, cy + 30, -Math.PI / 2, 0, 66, 44);
+    g.fillStyle(0xe0702c, 1);
+    petal(g, cx, cy + 30, -Math.PI / 2, 0, 50, 32);
+    g.fillStyle(0xf2b928, 1);
+    petal(g, cx, cy + 30, -Math.PI / 2, 0, 30, 18);
+  } else {
+    // Compost bin.
+    g.fillStyle(0x6a4630, 1);
+    g.fillRoundedRect(cx - 26, cy - 14, 52, 46, 6);
+    g.fillStyle(0x8a6040, 1);
+    g.fillRoundedRect(cx - 30, cy - 22, 60, 12, 4);
+    g.lineStyle(3, 0x3f281b, 1);
+    for (const dx of [-12, 0, 12]) g.lineBetween(cx + dx, cy - 4, cx + dx, cy + 24);
+    g.fillStyle(PALETTE.leaf, 1);
+    petal(g, cx, cy - 22, -2.0, 0, 20, 9);
+    petal(g, cx, cy - 22, -1.0, 0, 20, 9);
+  }
+}
+
+export function makeWeedTextures(scene: Phaser.Scene) {
+  const g = scene.make.graphics({ x: 0, y: 0 }, false);
+  const bake = (key: string, draw: () => void) => {
+    g.clear();
+    draw();
+    g.generateTexture(key, TEX, TEX);
+  };
+  bake('weed-creeping', () => {
+    g.fillStyle(0x2b4a1c, 1);
+    g.fillRoundedRect(4, 4, TEX - 8, TEX - 8, 14);
+    vine(g, TEX / 2, TEX / 2, PALETTE.weed, 0x3f7a22);
+  });
+  bake('weed-aggressive', () => {
+    g.fillStyle(0x3a1218, 1);
+    g.fillRoundedRect(4, 4, TEX - 8, TEX - 8, 14);
+    thorns(g, TEX / 2, TEX / 2, 0xe0405a, 0x6a1020);
+  });
+  // Overlays drawn on top of an infested plant: vines (or thorns) wrapping its edges.
+  bake('infest-creeping', () => {
+    for (const [x, y] of [[18, 20], [78, 22], [20, 78], [76, 76]] as const) vine(g, x, y, PALETTE.weed, 0x3f7a22, 0.45);
+    g.lineStyle(4, 0x3f7a22, 1);
+    g.strokeRoundedRect(8, 8, TEX - 16, TEX - 16, 16);
+  });
+  bake('infest-aggressive', () => {
+    for (const [x, y] of [[18, 20], [78, 22], [20, 78], [76, 76]] as const) thorns(g, x, y, 0xe0405a, 0x6a1020, 0.4);
+    g.lineStyle(4, 0x6a1020, 1);
+    g.strokeRoundedRect(8, 8, TEX - 16, TEX - 16, 16);
+  });
+  bake('nest', () => drawNest(g));
+  for (const k of ['pull', 'spray', 'burn', 'compost']) bake(`tool-${k}`, () => drawTool(g, k));
+  bake('leaf', () => {
+    g.fillStyle(0xffffff, 1);
+    petal(g, TEX / 2 - 12, TEX / 2, 0, 0, 24, 10);
+  });
+  g.destroy();
+}
+
 export function makeTextures(scene: Phaser.Scene) {
   const g = scene.make.graphics({ x: 0, y: 0 }, false);
   const bake = (key: string, draw: () => void, w = TEX, h = TEX) => {
@@ -257,4 +398,5 @@ export function makeTextures(scene: Phaser.Scene) {
     petal(g, 4, 8, 0, 0, 20, 10);
   }, 26, 16);
   g.destroy();
+  makeWeedTextures(scene);
 }

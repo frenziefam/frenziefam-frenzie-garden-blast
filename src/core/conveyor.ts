@@ -68,7 +68,11 @@ export function drawSeed(state: GameState, slot: number): Species {
     species = droughtPick(state, slot) ?? takeFromBag(state);
     const others = state.conveyor.filter((_, i) => i !== slot);
     if (others.length === 2 && others.every((o) => o === species)) {
-      species = takeFromBag(state);
+      // Avoid a triple: draw again until a different species comes up, with a fixed fallback
+      // when the bag is all one species. Retries alone can repeat, so they are capped.
+      const avoid = species;
+      for (let i = 0; i < 12 && species === avoid; i++) species = takeFromBag(state);
+      if (species === avoid) species = activeSpecies(state).find((s) => s !== avoid) ?? avoid;
     }
   }
   state.lastDrawn[species] = state.draws;
