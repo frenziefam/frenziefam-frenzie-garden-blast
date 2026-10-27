@@ -1,0 +1,31 @@
+{
+  "name": "frenzie-garden-blast",
+  "version": "0.1.0",
+  "description": "Frenzie Garden Blast — botanical puzzle game (Prototype A)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frenziefam/frenziefam-frenzie-garden-blast.git"
+  },
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/frenziefam/frenziefam-frenzie-garden-blast/issues"
+  },
+  "homepage": "https://github.com/frenziefam/frenziefam-frenzie-garden-blast#readme",
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^6.4.5",
+    "vitest": "^3.2.7"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "private": true,
+  "type": "module"
+}
