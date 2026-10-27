@@ -1,6 +1,18 @@
-// Prototype A test levels. Each level is plain data, so new levels need no new code.
+// Test levels. Each level is plain data, so new levels need no new code.
+// a1-a5 teach the planting puzzle (Prototype A). b1-b8 teach weeds and tools (Prototype B).
 
-import { LevelDef } from './types';
+import { Cell, LevelDef, Species, WeedType } from './types';
+
+const row = (r: number, cols: number[], species: Species) => cols.map((c) => ({ r, c, species }));
+const col = (c: number, rows: number[], species: Species) => rows.map((r) => ({ r, c, species }));
+const weeds = (type: WeedType, cells: [number, number][]) => cells.map(([r, c]) => ({ r, c, type }));
+const square = (r: number, c: number, species: Species) => [
+  { r, c, species },
+  { r, c: c + 1, species },
+  { r: r + 1, c, species },
+  { r: r + 1, c: c + 1, species },
+];
+export const cellKey = (p: Cell) => `${p.r},${p.c}`;
 
 const SMALL = ['########', '#......#', '#......#', '#......#', '#......#', '#......#', '#......#', '########'];
 const MEDIUM = ['.......#', '.......#', '.......#', '.......#', '.......#', '.......#', '.......#', '########'];
@@ -121,12 +133,168 @@ export const LEVELS: LevelDef[] = [
   },
 ];
 
+export const WEED_LEVELS: LevelDef[] = [
+  {
+    id: 'b1',
+    name: 'Creeping Vines',
+    mode: 'campaign',
+    intro: 'Grow the lily row before the vines reach it.',
+    tip: 'Creeping weeds spread one tile every 3 plantings. The dashed tile shows where they go next. Tap Pull Weeds, then a weed, to remove it.',
+    mask: SMALL,
+    blueprints: [{ id: 'lilies', name: 'Lily row', cells: row(4, [2, 3, 4, 5], 'lily') }],
+    objectives: [{ kind: 'blueprint', blueprintId: 'lilies', count: 1 }],
+    weights: { lily: 3, rose: 2, daisy: 2 },
+    weeds: weeds('creeping', [[1, 1], [1, 2]]),
+    tools: { pull: 2 },
+    moveLimit: 16,
+    compost: 1,
+    freeform: true,
+    stars: [400, 1000, 1400],
+  },
+  {
+    id: 'b2',
+    name: 'Choked',
+    mode: 'campaign',
+    intro: 'Grow both rose squares. Weeds choke the flowers they touch.',
+    tip: 'A weed that reaches a plant infests it. Two plantings later the plant is choked and turns into a weed. Pull the weed off it, or bloom a pattern next to it, to save it.',
+    mask: MEDIUM,
+    blueprints: [
+      { id: 'left', name: 'Left square', cells: square(2, 1, 'rose') },
+      { id: 'right', name: 'Right square', cells: square(2, 4, 'rose') },
+    ],
+    objectives: [
+      { kind: 'blueprint', blueprintId: 'left', count: 1 },
+      { kind: 'blueprint', blueprintId: 'right', count: 1 },
+    ],
+    weights: { rose: 5, tulip: 2, daisy: 2 },
+    weeds: [...weeds('creeping', [[5, 0], [6, 0]]), ...weeds('creeping', [[0, 6], [0, 5]])],
+    tools: { pull: 2 },
+    moveLimit: 24,
+    compost: 2,
+    freeform: true,
+    stars: [800, 1600, 2100],
+  },
+  {
+    id: 'b3',
+    name: 'Clear the Beds',
+    mode: 'campaign',
+    intro: 'Grow the rose line and clear every weed.',
+    tip: 'A Bloom Burst clears weeds on the tiles beside it. Patterns of 5 or more flowers reach the diagonals too.',
+    blueprints: [{ id: 'line', name: 'Rose line', cells: row(4, [1, 2, 3, 4, 5], 'rose') }],
+    objectives: [{ kind: 'blueprint', blueprintId: 'line', count: 1 }, { kind: 'clearWeeds' }],
+    weights: { rose: 4, daisy: 2, sunflower: 2 },
+    weeds: [...weeds('creeping', [[3, 2], [3, 3]]), ...weeds('creeping', [[5, 4], [5, 5]])],
+    creepInterval: 5,
+    tools: { pull: 3 },
+    moveLimit: 22,
+    compost: 2,
+    freeform: true,
+    stars: [900, 1800, 2300],
+  },
+  {
+    id: 'b4',
+    name: 'Weed Spray',
+    mode: 'campaign',
+    intro: 'Grow the sunflower cross and clear every weed.',
+    tip: 'Weed Spray clears a 3×3 area and keeps weeds out of it for 2 plantings. Aim it at the middle of a patch.',
+    blueprints: [
+      {
+        id: 'cross',
+        name: 'Sunflower cross',
+        cells: [...col(3, [1, 2, 3, 4, 5], 'sunflower').filter((p) => p.r !== 3), ...row(3, [1, 2, 3, 4, 5], 'sunflower')],
+      },
+    ],
+    objectives: [{ kind: 'blueprint', blueprintId: 'cross', count: 1 }, { kind: 'clearWeeds' }],
+    weights: { sunflower: 4, tulip: 2, lily: 2 },
+    weeds: weeds('creeping', [[6, 6], [6, 7], [7, 6], [7, 7], [5, 7]]),
+    tools: { pull: 1, spray: 1 },
+    moveLimit: 22,
+    compost: 2,
+    freeform: true,
+    stars: [1000, 2000, 2900],
+  },
+  {
+    id: 'b5',
+    name: 'Ticking Weeds',
+    mode: 'campaign',
+    intro: 'Grow the daisy row. Red weeds spread on a timer.',
+    tip: 'Red weeds spread every 20 seconds, whatever you do. The clock starts after your first planting, and Pause stops it.',
+    mask: MEDIUM,
+    blueprints: [{ id: 'daisies', name: 'Daisy row', cells: row(2, [1, 2, 3, 4], 'daisy') }],
+    objectives: [{ kind: 'blueprint', blueprintId: 'daisies', count: 1 }, { kind: 'score', target: 900 }],
+    weights: { daisy: 3, rose: 2, lily: 2 },
+    weeds: weeds('aggressive', [[0, 6]]),
+    aggressiveMs: 20000,
+    tools: { pull: 2 },
+    moveLimit: 18,
+    compost: 2,
+    freeform: true,
+    stars: [900, 1200, 1600],
+  },
+  {
+    id: 'b6',
+    name: 'Keep the Lily',
+    mode: 'campaign',
+    intro: 'Score 1,000 points without losing the gold-ringed lily.',
+    tip: 'If a weed chokes the lily, the level is lost. Blooming it in a pattern is fine.',
+    blueprints: [],
+    plants: [{ r: 3, c: 3, species: 'lily', stage: 1 }],
+    objectives: [{ kind: 'protect', r: 3, c: 3 }, { kind: 'score', target: 1000 }],
+    weights: { rose: 3, daisy: 3, tulip: 3 },
+    weeds: [...weeds('aggressive', [[0, 0]]), ...weeds('creeping', [[7, 7], [7, 6]])],
+    aggressiveMs: 15000,
+    tools: { pull: 2, spray: 1 },
+    moveLimit: 22,
+    compost: 2,
+    freeform: true,
+    stars: [1000, 1700, 2400],
+  },
+  {
+    id: 'b7',
+    name: 'Controlled Burn',
+    mode: 'campaign',
+    intro: 'Burn out the weed row, then grow the rose line.',
+    tip: 'Controlled Burn clears a whole row or column, but it destroys any flowers on it too. Check the warning before you confirm.',
+    blueprints: [{ id: 'line', name: 'Rose line', cells: row(5, [1, 2, 3, 4, 5], 'rose') }],
+    objectives: [{ kind: 'blueprint', blueprintId: 'line', count: 1 }, { kind: 'clearWeeds' }],
+    weights: { rose: 4, daisy: 2, tulip: 2 },
+    weeds: weeds('creeping', [0, 1, 2, 3, 4, 5, 6, 7].map((c) => [2, c] as [number, number])),
+    creepInterval: 4,
+    tools: { burn: 1, pull: 1 },
+    moveLimit: 20,
+    compost: 2,
+    freeform: true,
+    stars: [900, 1600, 2100],
+  },
+  {
+    id: 'b8',
+    name: 'Root Nest',
+    mode: 'campaign',
+    intro: 'Destroy the Root Nest. It has 3 hit points.',
+    tip: 'A Root Nest spawns a weed every 3 plantings. A Bloom Burst next to it deals 1 damage, or 2 for 5+ flowers. Controlled Burn deals 1. The rose line is a good start.',
+    blueprints: [{ id: 'line', name: 'Rose line', cells: row(2, [2, 3, 4, 5, 6], 'rose') }],
+    objectives: [{ kind: 'nests' }],
+    weights: { rose: 4, daisy: 3, tulip: 2 },
+    nests: [{ r: 1, c: 6 }],
+    nestInterval: 3,
+    creepInterval: 4,
+    tools: { burn: 1, pull: 3 },
+    moveLimit: 24,
+    compost: 2,
+    freeform: true,
+    stars: [800, 1900, 2600],
+  },
+];
+
+/** Every Campaign level in play order. */
+export const ALL_LEVELS: LevelDef[] = [...LEVELS, ...WEED_LEVELS];
+
 export const ENDLESS: LevelDef = {
   id: 'endless',
   name: 'Endless Garden',
   mode: 'endless',
   intro: 'Bloom patterns of 4 or more anywhere. The run ends when the garden is full.',
-  tip: 'New species join as you go. Weeds arrive in the next prototype.',
+  tip: 'New species join as you go. Weeds start arriving after 10 plantings, and every 3 bursts earns a Pull Weeds.',
   blueprints: [],
   objectives: [],
   weights: { rose: 3, daisy: 3, sunflower: 3, tulip: 3, lily: 3, orchid: 1 },
