@@ -299,6 +299,9 @@ export class GameScene extends Phaser.Scene {
   // ---------- state to screen ----------
 
   private refreshAll() {
+    // Stop any tween still running on a short-lived sprite before it goes, or the tween would
+    // write to a destroyed object on the next frame (slow frames can end a phase early).
+    this.tweens.killTweensOf(this.temps);
     for (const t of this.temps) t.destroy();
     this.temps = [];
     this.syncPlants();
@@ -336,7 +339,7 @@ export class GameScene extends Phaser.Scene {
   /** Rebuilds weeds, infestations, nests, the guarded ring, spray cover and telegraphs. */
   private syncWeeds() {
     const s = this.state;
-    this.tweens.killTweensOf(this.overLayer.list);
+    this.tweens.killTweensOf([...this.weedLayer.list, ...this.overLayer.list]);
     this.weedLayer.removeAll(true);
     this.overLayer.removeAll(true);
     this.protectGfx.clear();
@@ -830,8 +833,8 @@ export class GameScene extends Phaser.Scene {
     this.weedLayer.add(img);
     this.tweens.add({ targets: img, scale: WEED_SCALE, angle: { from: -25, to: 0 }, duration: 380, ease: 'Back.Out' });
     if (fresh) {
-      const ring = this.temp(this.add.circle(x, y, 12).setStrokeStyle(5, WEED_COLOR[weed], 1));
-      this.tweens.add({ targets: ring, radius: 50, alpha: 0, duration: 500 });
+      const ring = this.add.circle(x, y, 12).setStrokeStyle(5, WEED_COLOR[weed], 1);
+      this.tweens.add({ targets: ring, radius: 50, alpha: 0, duration: 500, onComplete: () => ring.destroy() });
     }
   }
 
@@ -853,8 +856,8 @@ export class GameScene extends Phaser.Scene {
       this.tweens.add({ targets: img, scale: 0.3, alpha: 0, angle: -30, duration: 380, onComplete: () => img.destroy() });
     }
     this.infest[r][c]?.setVisible(false);
-    const label = this.temp(text(this, x, y - 30, 'Choked!', 22, '#ff8a6a', { stroke: '#2a1a10', strokeThickness: 5 }));
-    this.tweens.add({ targets: label, y: y - 60, alpha: 0, duration: 800 });
+    const label = text(this, x, y - 30, 'Choked!', 22, '#ff8a6a', { stroke: '#2a1a10', strokeThickness: 5 });
+    this.tweens.add({ targets: label, y: y - 60, alpha: 0, duration: 800, onComplete: () => label.destroy() });
   }
 
   private animateCleared(cells: Cell[], cured: Cell[]) {
